@@ -5,6 +5,6 @@ If you used the repository for your experiments, please cite the paper.
 
 The paper deals with autoencoders that are trained by jointly maximizing the mutual information between the transmitted and received symbols and minimizing the classical cross-entropy loss function. Capacity is approached at low SNRs while further investigations are needed for large code-length, especially due to numerical issues with the estimator. 
 
-A minimal example of using a pre-trained model is given in Capacity-Approaching_Autoencoders.py. When executed, the script loads a pre-trained autoencoder model from the folder "Models_AE". If you want to train your own model, please delete the models inside that folder.
+A minimal example of using a pre-trained model is given in Capacity-Approaching_Autoencoders.py. When executed, the script loads a pre-trained autoencoder model, with an AWGN channel, from the folder "Models_AE". If you want to train your own model, please delete the models inside that folder.
 
 > python Capacity-Approaching_Autoencoders.py
