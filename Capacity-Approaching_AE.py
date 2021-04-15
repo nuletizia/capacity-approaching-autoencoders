@@ -78,6 +78,17 @@ def get_gradient_norm(model):
 def shuffleColumns(x):
     return tf.gather(x, tf.random.shuffle(tf.range(tf.shape(x)[0])))
 
+# for parser
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 class CAAE():
     def __init__(self, encoder_path, decoder_path, output_directory):
@@ -360,9 +371,23 @@ if __name__ == '__main__':
                         default="Models_AE/decoder.h5")
     parser.add_argument('--output_directory', help="Directoy to save weights and images to.",
                         default="Output")
+    parser.add_argument('--train', type=str2bool, help="Start the training process.",
+                        default=False)
     args = parser.parse_args()
 
+    # Load the model
     CAAE = CAAE(args.load_encoder, args.load_decoder, args.output_directory)
-    CAAE.train(epochs=10, batch_size_AE = 1000, batch_size_MI = 1000, k = 5, n = 2)
-    CAAE.train_MI(epochs_MI=100, batch_size_MI=1000, k = 5, n = 2)
-    CAAE.test(batch_size_AE = 4000, k = 5, n = 2)
+
+    # Check if the folder with the encoder is empty and the flag training is on
+    if not(os.path.exists(args.load_encoder)) and args.train:
+        print('Training the model')
+        CAAE.train(epochs=10, batch_size_AE = 1000, batch_size_MI = 1000, k = 5, n = 2)
+        CAAE.train_MI(epochs_MI=100, batch_size_MI=1000, k = 5, n = 2)
+        CAAE.test(batch_size_AE = 4000, k = 5, n = 2)
+    # Just testing
+    elif os.path.exists(args.load_encoder):
+        print('Testing using the loaded models in your folder. If you want to train the model, delete the models')
+        CAAE.test(batch_size_AE = 4000, k = 5, n = 2)
+
+    else:
+        print('Error in the models loading, please check the correct path')
