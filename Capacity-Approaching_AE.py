@@ -21,7 +21,7 @@ from tensorflow import set_random_seed
 set_random_seed(2)
 
 # custom cross-entropy to allow gradient separation
-def categorical_crossentropy(y_true, y_pred, from_logits=False, label_smoothing=0):
+def categorical_crossentropy(y_true, y_pred, from_logits=False, label_smoothing=0.2):
     y_pred = K.constant(y_pred) if not K.is_tensor(y_pred) else y_pred
     y_true = K.cast(y_true, y_pred.dtype)
 
@@ -45,7 +45,7 @@ def mine_loss(args):
 # mixed loss
 def customLoss(MI):
   def dice(yTrue, yPred):
-      beta = 0 # BETA PARAMETER IN THE PAPER, to choose at the beginning
+      beta = 0.2 # BETA PARAMETER IN THE PAPER, to choose at the beginning
       return categorical_crossentropy(yTrue, yPred) - beta*MI
 
   return dice
@@ -336,7 +336,7 @@ class CAAE():
         p_test = batch_size_AE
         s_in_t = np.transpose(np.tile(alphabet, p_test))
         EbN0_dB = range(-14, 19)
-        ber = np.zeros((43,))
+        ber = np.zeros((33,))
         j = 0
 
         for EbN0 in EbN0_dB:
