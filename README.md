@@ -11,4 +11,9 @@ The paper deals with autoencoders that are trained by jointly maximizing the mut
 
 A minimal example of using a pre-trained model is given in Capacity-Approaching_Autoencoders.py. When executed, the script loads a pre-trained autoencoder model, with an AWGN channel, from the folder "Models_AE". If you want to train your own model, please delete the models inside that folder.
 
+Test the model
 > python Capacity-Approaching_Autoencoders.py
+
+Train the model
+
+> python Capacity-Approaching_Autoencoders.py --train True
