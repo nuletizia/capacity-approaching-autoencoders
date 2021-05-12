@@ -2,6 +2,7 @@
 This repository contains the official TensorFlow implementation of the following paper:
 
 -- N. A. Letizia, A. M. Tonello, "Capacity-driven Autoencoders for Communications," IEEE Open Journal of Communications Society, 2021 --
+-- Preprint: https://arxiv.org/abs/2009.05273 --
 
 If you used the repository for your experiments, please cite the paper.
 
