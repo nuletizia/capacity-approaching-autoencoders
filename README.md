@@ -1,7 +1,7 @@
 # capacity-approaching-autoencoders
 This repository contains the official TensorFlow implementation of the following paper:
 
--- Capacity-driven Autoencoders for Communications --
+Capacity-driven Autoencoders for Communications : https://ieeexplore.ieee.org/document/9449919
 
 If you used the repository for your experiments, please cite the paper.
 
