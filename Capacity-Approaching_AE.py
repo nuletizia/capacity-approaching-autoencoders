@@ -6,6 +6,7 @@ from keras.models import Sequential, Model, load_model
 from keras.optimizers import Adam
 from keras import backend as K
 from uniform_noise import UniformNoise
+from gammaDIME import gamma_dime_loss
 
 import os
 import argparse
@@ -91,7 +92,7 @@ def str2bool(v):
 
 
 class CAAE():
-    def __init__(self, encoder_path, decoder_path, output_directory):
+    def __init__(self, encoder_path, decoder_path, output_directory, MI_type='MINE'):
         block_size = 5 # k parameter
         num_enc_inputs = pow(2, block_size)  # M parameter = 2^k
         num_hidden = 2  # 2*N parameter
@@ -126,7 +127,7 @@ class CAAE():
             self.receiver = self.build_receiver()
 
             # build the mutual information block estimator
-            self.discriminator = self.build_discriminator()
+            self.discriminator = self.build_discriminator(MI_type)
 
             # the transmitter encodes the bits in s
             s_in = Input(shape=(self.num_enc_inputs,))
@@ -156,8 +157,12 @@ class CAAE():
             t_xy = self.discriminator(T1)
             t_x_y = self.discriminator(T2)
 
-            # MINE loss
-            loss = Lambda(mine_loss, name='mine_loss')([t_xy, t_x_y])
+            if MI_type == 'gammaDIME':
+                loss = Lambda(gamma_dime_loss, name='gamma_dime_loss')([t_xy, t_x_y])
+            else:
+                # use MINE is default
+                loss = Lambda(mine_loss, name='mine_loss')([t_xy, t_x_y])
+
             output_MI = Lambda(lambda x: -x)(loss)
             self.loss_model = Model(s_in, output_MI)
             self.loss_model.add_loss(loss)
@@ -179,7 +184,12 @@ class CAAE():
             T2 = Input(shape=(self.num_joint,))
             t_xy = self.discriminator(T1)
             t_x_y = self.discriminator(T2)
-            loss = Lambda(mine_loss, name='mine_loss')([t_xy, t_x_y])
+
+            if MI_type == 'gammaDIME':
+                loss = Lambda(gamma_dime_loss, name='gamma_dime_loss')([t_xy, t_x_y])
+            else:
+                loss = Lambda(mine_loss, name='mine_loss')([t_xy, t_x_y])
+
             output_MI = Lambda(lambda x: -x)(loss)
             self.loss_model_est = Model([T1, T2], output_MI)
             self.loss_model_est.add_loss(loss)
@@ -214,13 +224,17 @@ class CAAE():
 
         return Model(y, s_out)
 
-    def build_discriminator(self):
+    def build_discriminator(self, MI_type):
+
+        if MI_type == 'gammaDIME':
+            activation_type = 'softplus'
+        else:
+            activation_type = 'linear'
 
         model = Sequential()
         model.add(Dense(200, activation="relu", input_dim=self.num_joint))
         model.add(GaussianNoise(0.3)) # It works only during the training
-        model.add(Dense(1))
-
+        model.add(Dense(1, activation = activation_type))
         model.summary()
 
         T = Input(shape=(self.num_joint,))
@@ -373,10 +387,12 @@ if __name__ == '__main__':
                         default="Output")
     parser.add_argument('--train', type=str2bool, help="Start the training process.",
                         default=False)
+    parser.add_argument('--MI_type', help="Select the type of estimator to use.",
+                        default="MINE")
     args = parser.parse_args()
 
     # Load the model
-    CAAE = CAAE(args.load_encoder, args.load_decoder, args.output_directory)
+    CAAE = CAAE(args.load_encoder, args.load_decoder, args.output_directory, args.MI_type)
 
     # Check if the folder with the encoder is empty and the flag training is on
     if not(os.path.exists(args.load_encoder)) and args.train:
