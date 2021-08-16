@@ -21,7 +21,7 @@ seed(1)
 from tensorflow import set_random_seed
 set_random_seed(2)
 
-# custom cross-entropy to allow gradient separation
+# custom cross-entropy to allow gradient separation and label smoothing regularization
 def categorical_crossentropy(y_true, y_pred, from_logits=False, label_smoothing=0.2):
     y_pred = K.constant(y_pred) if not K.is_tensor(y_pred) else y_pred
     y_true = K.cast(y_true, y_pred.dtype)
@@ -119,6 +119,7 @@ class CAAE():
             # set optimizers
             optimizer = Adam(0.01, 0.5)
             optimizer_MI = Adam(0.01, 0.5)
+            optimizer_MI_est = Adam(0.01, 0.5)
 
             # build the transmitter
             self.transmitter = self.build_transmitter()
@@ -180,20 +181,20 @@ class CAAE():
 
 
             # model for the estimation of MI at different SNRs
-            T1 = Input(shape=(self.num_joint,))
-            T2 = Input(shape=(self.num_joint,))
-            t_xy = self.discriminator(T1)
-            t_x_y = self.discriminator(T2)
+            T1_est = Input(shape=(self.num_joint,))
+            T2_est = Input(shape=(self.num_joint,))
+            t_xy = self.discriminator(T1_est)
+            t_x_y = self.discriminator(T2_est)
 
             if MI_type == 'gammaDIME':
-                loss = Lambda(gamma_dime_loss, name='gamma_dime_loss')([t_xy, t_x_y])
+                loss_est = Lambda(gamma_dime_loss, name='gamma_dime_loss')([t_xy, t_x_y])
             else:
-                loss = Lambda(mine_loss, name='mine_loss')([t_xy, t_x_y])
+                loss_est = Lambda(mine_loss, name='mine_loss')([t_xy, t_x_y])
 
-            output_MI = Lambda(lambda x: -x)(loss)
-            self.loss_model_est = Model([T1, T2], output_MI)
-            self.loss_model_est.add_loss(loss)
-            self.loss_model_est.compile(optimizer=optimizer_MI)
+            output_MI_est = Lambda(lambda x: -x)(loss_est)
+            self.loss_model_est = Model([T1_est, T2_est], output_MI_est)
+            self.loss_model_est.add_loss(loss_est)
+            self.loss_model_est.compile(optimizer=optimizer_MI_est)
 
     def build_transmitter(self):
 
@@ -234,6 +235,7 @@ class CAAE():
         model = Sequential()
         model.add(Dense(200, activation="relu", input_dim=self.num_joint))
         model.add(GaussianNoise(0.3)) # It works only during the training
+        model.add(Dense(200, activation="sigmoid"))
         model.add(Dense(1, activation = activation_type))
         model.summary()
 
@@ -273,7 +275,7 @@ class CAAE():
                     # Plot the progress. if needed
                     # print("%d [MI loss: %f" % (epoch, loss_MI))
                 mutual_information = self.loss_model.predict(s_in)
-                MI[0,ij] = np.median(mutual_information)
+                MI[0,ij] = np.mean(mutual_information)
 
                 # traning auto encoder ON BATCH
                 loss_AE = np.zeros((epochs_AE[e],))
@@ -283,7 +285,7 @@ class CAAE():
                     s_in_batch = s_in[idx]
                     loss_AE[epoch] = self.combined.train_on_batch(s_in_batch, s_in_batch)
 
-                print("%d [CAAE_loss: %f, MI_loss: %f]" % (ij, np.median(loss_AE), MI[0,ij])) # median for a stable output
+                print("%d [CAAE_loss: %f, MI_loss: %f]" % (ij, np.mean(loss_AE), MI[0,ij])) # median for a stable output
 
             # if you want to visualize the constellation and the BLER during the training progress on Matlab
             EbN0_dB = range(-14, 29)
@@ -343,7 +345,7 @@ class CAAE():
                     self.loss_model_est.train_on_batch([data_xy_batch, data_x_y_batch],[])
 
                 mutual_information = self.loss_model_est.predict([data_xy, data_x_y])
-                MI[0,j] = np.median(mutual_information)
+                MI[0,j] = np.mean(mutual_information)
                 print(MI[0,j])
                 j = j+1
 
